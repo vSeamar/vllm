@@ -312,6 +312,10 @@ class MediaConnector:
 
         if direct_url_loading and url_spec.scheme.startswith("http"):
             self._assert_url_in_allowed_media_domains(url_spec)
+            logger.info(
+                "Using direct URL loading for video: %s",
+                video_url[:100] + "..." if len(video_url) > 100 else video_url,
+            )
 
             # Use ThreadPoolExecutor to enforce timeout
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -325,6 +329,10 @@ class MediaConnector:
                     ) from e
 
         # Default: download to bytes
+        logger.debug(
+            "Using BytesIO loading for video: %s",
+            video_url[:100] + "..." if len(video_url) > 100 else video_url,
+        )
         return self.load_from_url(
             video_url,
             video_io,
@@ -356,6 +364,10 @@ class MediaConnector:
 
         if direct_url_loading and url_spec.scheme.startswith("http"):
             self._assert_url_in_allowed_media_domains(url_spec)
+            logger.info(
+                "Using direct URL loading for video (async): %s",
+                video_url[:100] + "..." if len(video_url) > 100 else video_url,
+            )
 
             # Use asyncio.wait_for to enforce timeout
             future = loop.run_in_executor(
@@ -372,6 +384,10 @@ class MediaConnector:
                 ) from e
 
         # Default: download to bytes
+        logger.debug(
+            "Using BytesIO loading for video (async): %s",
+            video_url[:100] + "..." if len(video_url) > 100 else video_url,
+        )
         return await self.load_from_url_async(
             video_url,
             video_io,

@@ -151,6 +151,11 @@ class OpenCVVideoBackend(VideoLoader):
             frames = frames[:i]
             frame_idx = frame_idx[:i]
             num_frames_to_sample = i
+        else:
+            logger.info(
+                "Successfully loaded all %d frames from video (opencv backend)",
+                num_frames_to_sample,
+            )
 
         # Use transformers transformers.video_utils.VideoMetadata format
         # NOTE(Isotr0py): For models like Qwen3-VL/GLM4.5V, this metadata
@@ -270,6 +275,11 @@ class OpenCVDynamicVideoBackend(OpenCVVideoBackend):
             )
             frames = frames[:i]
             frame_indices = list(frame_indices)[:i]
+        else:
+            logger.info(
+                "Successfully loaded all %d frames from video (opencv_dynamic backend)",
+                len(frame_indices),
+            )
 
         # Use transformers transformers.video_utils.VideoMetadata format
         metadata = {
