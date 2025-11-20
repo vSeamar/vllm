@@ -431,3 +431,53 @@ async def test_allowed_media_domains(video_url: str, num_frames: int):
 
     with pytest.raises(ValueError):
         _, _ = await connector.fetch_video_async(disallowed_url)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("video_url", TEST_VIDEO_URLS)
+@pytest.mark.parametrize("recovery_offset", [0, 3, 6])
+async def test_fetch_video_with_frame_recovery(video_url: str, recovery_offset: int):
+    """Test frame recovery parameter with good videos (no corruption)."""
+    connector = MediaConnector(
+        media_io_kwargs={
+            "video": {"num_frames": 32, "recovery_offset": recovery_offset}
+        }
+    )
+
+    video_sync, metadata_sync = connector.fetch_video(video_url)
+    video_async, metadata_async = await connector.fetch_video_async(video_url)
+
+    # Should work regardless of recovery_offset for good videos
+    assert video_sync.shape[0] > 0
+    assert video_async.shape[0] > 0
+    assert np.array_equal(video_sync, video_async)
+    assert metadata_sync == metadata_async
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("video_url", TEST_VIDEO_URLS)
+@pytest.mark.parametrize("recovery_offset", [3, 6])
+async def test_fetch_video_frame_recovery_with_dynamic_backend(
+    video_url: str, recovery_offset: int, monkeypatch: pytest.MonkeyPatch
+):
+    """Test frame recovery with opencv_dynamic backend."""
+    with monkeypatch.context() as m:
+        m.setenv("VLLM_VIDEO_LOADER_BACKEND", "opencv_dynamic")
+        connector = MediaConnector(
+            media_io_kwargs={
+                "video": {
+                    "fps": 2,
+                    "max_duration": 60,
+                    "recovery_offset": recovery_offset,
+                }
+            }
+        )
+
+        video_sync, metadata_sync = connector.fetch_video(video_url)
+        video_async, metadata_async = await connector.fetch_video_async(video_url)
+
+        assert video_sync.shape[0] > 0
+        assert video_async.shape[0] > 0
+        assert np.array_equal(video_sync, video_async)
+        assert metadata_sync == metadata_async
+        assert metadata_sync["video_backend"] == "opencv_dynamic"

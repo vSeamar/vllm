@@ -620,6 +620,62 @@ Full example: [examples/online_serving/openai_chat_completion_client_for_multimo
     export VLLM_VIDEO_FETCH_TIMEOUT=<timeout>
     ```
 
+#### Video Configuration Options
+
+You can configure video processing behavior using `--media-io-kwargs`. The following parameters are available:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `num_frames` | int | 32 | Number of frames to sample from video |
+| `fps` | int | -1 (opencv)<br>2 (opencv_dynamic) | Target FPS for frame sampling. Used differently by each backend: `opencv` uses it to limit total frames, `opencv_dynamic` uses it as sampling rate |
+| `max_duration` | int | 300 | Maximum video duration in seconds (opencv_dynamic backend only) |
+| `recovery_offset` | int | 0 | Frame recovery search radius. 0=disabled (default), >0=enabled with that search radius. Use when videos have corrupted frames or early termination issues |
+
+##### Frame Recovery
+
+When videos have corrupted frames or encoding issues, vLLM can attempt to recover by seeking to nearby replacement frames. This is especially useful for videos that fail with "Expected X frames, but only loaded Y frames" errors.
+
+Enable frame recovery by setting `recovery_offset` to a positive value:
+
+```bash
+# Enable recovery with default radius (6 recommended)
+vllm serve MODEL --media-io-kwargs '{"video": {"fps": 2, "recovery_offset": 6}}'
+
+# Smaller radius for minor corruption
+vllm serve MODEL --media-io-kwargs '{"video": {"recovery_offset": 3}}'
+
+# Larger radius for severe corruption clusters
+vllm serve MODEL --media-io-kwargs '{"video": {"recovery_offset": 10}}'
+```
+
+**How it works:**
+
+- Uses seeking (random access) to jump directly to each target frame
+- If a frame fails to load, searches nearby frames: -1, +1, -2, +2, ..., up to ±recovery_offset
+- Replaces corrupted frame with nearest good frame
+- Logs all recovery attempts and results
+
+**Benefits:**
+
+- Solves "early termination" issues where sequential loading stops at corrupted frames
+- Handles clusters of consecutive corrupted frames (radius 6 can bypass 7+ bad frames)
+- Zero performance overhead when disabled (default)
+- Only activates recovery when corruption is detected
+
+**When to use:**
+
+- Videos with known corruption or encoding issues
+- Getting "Expected X frames, but only loaded Y frames" warnings
+- Videos that work in other players but fail in vLLM
+
+**Recommended values:**
+
+- `3`: Minor corruption (1-3 consecutive bad frames)
+- `6`: Typical corruption (tested to handle 7+ consecutive bad frames)
+- `10+`: Severe corruption clusters
+
+**Note:** Frame recovery uses seeking, which works reliably with H.264, VP8, VP9, and MP4 formats. The recovered frame will be temporally close to the original (within ±recovery_offset frames).
+
 #### Custom RGBA Background Color
 
 To use a custom background color for RGBA images, pass the `rgba_background_color` parameter via `--media-io-kwargs`:
