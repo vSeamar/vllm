@@ -135,7 +135,9 @@ class OpenCVVideoBackend(VideoLoader):
             ok = cap.grab()
             if not ok:
                 if idx in frame_idx:
-                    logger.debug("Failed to grab frame %d (grab() returned False)", idx)
+                    logger.warning(
+                        "Failed to grab frame %d (grab() returned False)", idx
+                    )
                     failed_frame_indices.append(idx)
                 break
             if idx in frame_idx:
@@ -144,7 +146,7 @@ class OpenCVVideoBackend(VideoLoader):
                     frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     i += 1
                 else:
-                    logger.debug(
+                    logger.warning(
                         "Failed to retrieve frame %d (retrieve() returned False)", idx
                     )
                     failed_frame_indices.append(idx)
@@ -270,7 +272,9 @@ class OpenCVDynamicVideoBackend(OpenCVVideoBackend):
             ok = cap.grab()
             if not ok:
                 if idx in frame_indices:
-                    logger.debug("Failed to grab frame %d (grab() returned False)", idx)
+                    logger.warning(
+                        "Failed to grab frame %d (grab() returned False)", idx
+                    )
                     failed_frame_indices.append(idx)
                 break
             if idx in frame_indices:
@@ -279,7 +283,7 @@ class OpenCVDynamicVideoBackend(OpenCVVideoBackend):
                     frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     i += 1
                 else:
-                    logger.debug(
+                    logger.warning(
                         "Failed to retrieve frame %d (retrieve() returned False)", idx
                     )
                     failed_frame_indices.append(idx)
