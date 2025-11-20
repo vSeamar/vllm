@@ -130,23 +130,33 @@ class OpenCVVideoBackend(VideoLoader):
         frames = np.empty((len(frame_idx), height, width, 3), dtype=np.uint8)
 
         i = 0
+        failed_frame_indices = []
         for idx in range(max(frame_idx) + 1):
             ok = cap.grab()
             if not ok:
+                if idx in frame_idx:
+                    logger.debug("Failed to grab frame %d (grab() returned False)", idx)
+                    failed_frame_indices.append(idx)
                 break
             if idx in frame_idx:
                 ret, frame = cap.retrieve()
                 if ret:
                     frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     i += 1
+                else:
+                    logger.debug(
+                        "Failed to retrieve frame %d (retrieve() returned False)", idx
+                    )
+                    failed_frame_indices.append(idx)
 
         # Replace assertion with warning for partial frame loading
         if i < num_frames_to_sample:
             logger.warning(
                 "Expected reading %d frames, but only loaded %d frames from video. "
-                "Continuing with partial data.",
+                "Continuing with partial data. Failed frame indices: %s",
                 num_frames_to_sample,
                 i,
+                failed_frame_indices if failed_frame_indices else "early termination",
             )
             frames = frames[:i]
             frame_idx = frame_idx[:i]
@@ -255,23 +265,33 @@ class OpenCVDynamicVideoBackend(OpenCVVideoBackend):
         frames = np.empty((len(frame_indices), height, width, 3), dtype=np.uint8)
 
         i = 0
+        failed_frame_indices = []
         for idx in range(total_frames_num):
             ok = cap.grab()
             if not ok:
+                if idx in frame_indices:
+                    logger.debug("Failed to grab frame %d (grab() returned False)", idx)
+                    failed_frame_indices.append(idx)
                 break
             if idx in frame_indices:
                 ret, frame = cap.retrieve()
                 if ret:
                     frames[i] = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     i += 1
+                else:
+                    logger.debug(
+                        "Failed to retrieve frame %d (retrieve() returned False)", idx
+                    )
+                    failed_frame_indices.append(idx)
 
         # Replace assertion with warning for partial frame loading
         if i < len(frame_indices):
             logger.warning(
                 "Expected reading %d frames, but only loaded %d frames from video. "
-                "Continuing with partial data.",
+                "Continuing with partial data. Failed frame indices: %s",
                 len(frame_indices),
                 i,
+                failed_frame_indices if failed_frame_indices else "early termination",
             )
             frames = frames[:i]
             frame_indices = list(frame_indices)[:i]
